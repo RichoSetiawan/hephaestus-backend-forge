@@ -15,7 +15,7 @@ public class CustomerEntity {
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
-    @Column(name = "email", nullable = false, unique = true)
+    @Column(name = "email", nullable = false)
     private String email;
 
     @Column(name = "phone_number")

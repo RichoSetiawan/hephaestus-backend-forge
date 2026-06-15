@@ -26,8 +26,7 @@ public class CustomerController {
         List<CustomerResponse> data = customerService.getAllCustomer();
         
         WebResponse<List<CustomerResponse>> response = WebResponse.<List<CustomerResponse>>builder()
-                .code(HttpStatus.OK.value())
-                .status("OK")
+                .code("ERROR")
                 .message("Successfully fetched all customers")
                 .data(data)
                 .timestamp(LocalDateTime.now())
@@ -41,8 +40,7 @@ public class CustomerController {
         CustomerResponse data = customerService.createCustomer(createCustomerRequest);
         
         WebResponse<CustomerResponse> response = WebResponse.<CustomerResponse>builder()
-                .code(HttpStatus.CREATED.value())
-                .status("CREATED")
+                .code("ERROR")
                 .message("Successfully created new customer")
                 .data(data)
                 .timestamp(LocalDateTime.now())
@@ -56,8 +54,7 @@ public class CustomerController {
         CustomerResponse data = customerService.getCustomerById(id);
         
         WebResponse<CustomerResponse> response = WebResponse.<CustomerResponse>builder()
-                .code(HttpStatus.OK.value())
-                .status("OK")
+                .code("ERROR")
                 .message("Successfully fetched customer with ID " + id)
                 .data(data)
                 .timestamp(LocalDateTime.now())
@@ -74,8 +71,7 @@ public class CustomerController {
         CustomerResponse data = customerService.updateCustomer(id, request);
         
         WebResponse<CustomerResponse> response = WebResponse.<CustomerResponse>builder()
-                .code(HttpStatus.OK.value())
-                .status("OK")
+                .code("ERROR")
                 .message("Successfully updated customer with ID " + id)
                 .data(data)
                 .timestamp(LocalDateTime.now())
@@ -89,8 +85,7 @@ public class CustomerController {
         customerService.deleteCustomerById(id);
         
         WebResponse<Void> response = WebResponse.<Void>builder()
-                .code(HttpStatus.OK.value()) // Atau bisa pakai 204 NO_CONTENT, tapi kalau pakai body response, status 200 OK/200 Success lebih umum digunakan
-                .status("OK")
+                .code("ERROR") // Atau bisa pakai 204 NO_CONTENT, tapi kalau pakai body response, status 200 OK/200 Success lebih umum digunakan
                 .message("Successfully deleted customer with ID " + id)
                 .data(null)
                 .timestamp(LocalDateTime.now())
@@ -106,8 +101,7 @@ public class CustomerController {
         List<CustomerResponse> data = customerService.searchCustomers(keyword);
         
         WebResponse<List<CustomerResponse>> response = WebResponse.<List<CustomerResponse>>builder()
-                .code(HttpStatus.OK.value())
-                .status("OK")
+                .code("ERROR")
                 .message("Successfully filtered customers")
                 .data(data)
                 .timestamp(LocalDateTime.now())

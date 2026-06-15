@@ -11,8 +11,10 @@ import com.example.day2.dto.CustomerResponse;
 import com.example.day2.dto.WebResponse;
 import com.example.day2.service.CustomerServiceV2;
 
+import jakarta.validation.Valid;
+
 @RestController
-@RequestMapping("/api/v2/customers") // Perhatikan perubahannya ke v2!
+@RequestMapping("/api/v2/customers")
 public class CustomerControllerV2 {
 
     private final CustomerServiceV2 customerService;
@@ -28,7 +30,7 @@ public class CustomerControllerV2 {
     }
 
     @PostMapping
-    public ResponseEntity<WebResponse<CustomerResponse>> createCustomer(@RequestBody CreateCustomerRequest request) {        
+    public ResponseEntity<WebResponse<CustomerResponse>> createCustomer(@Valid @RequestBody CreateCustomerRequest request) {        
         CustomerResponse data = customerService.createCustomer(request);
         return new ResponseEntity<>(createWebResponse(HttpStatus.CREATED, "Successfully created new customer", data), HttpStatus.CREATED);
     }
@@ -40,7 +42,7 @@ public class CustomerControllerV2 {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<WebResponse<CustomerResponse>> updateCustomer(@PathVariable Long id, @RequestBody CreateCustomerRequest request) {
+    public ResponseEntity<WebResponse<CustomerResponse>> updateCustomer(@PathVariable Long id, @Valid @RequestBody CreateCustomerRequest request) {
         CustomerResponse data = customerService.updateCustomer(id, request);
         return ResponseEntity.ok(createWebResponse(HttpStatus.OK, "Successfully updated customer", data));
     }
@@ -57,11 +59,9 @@ public class CustomerControllerV2 {
         return ResponseEntity.ok(createWebResponse(HttpStatus.OK, "Successfully filtered customers", data));
     }
 
-    // Helper method biar tidak menulis builder WebResponse berulang-ulang
     private <T> WebResponse<T> createWebResponse(HttpStatus status, String message, T data) {
         return WebResponse.<T>builder()
-                .code(status.value())
-                .status(status.name())
+                .code(String.valueOf(status.value()))
                 .message(message)
                 .data(data)
                 .timestamp(LocalDateTime.now())
