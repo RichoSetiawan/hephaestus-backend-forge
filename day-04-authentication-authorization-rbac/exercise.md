@@ -1,288 +1,715 @@
-# Exercise - Authentication, Authorization & RBAC
+
+# Exercise - Authentication, Authorization & Loan Application API
 
 ## Objective
 
-Peserta mampu mendesain access control sederhana untuk loan system dengan authentication, authorization, RBAC, resource-level check, dan audit log requirement.
+Peserta dapat membuat authentication sederhana, menerapkan authorization berbasis role, dan menambahkan service baru yaitu Loan Application API.
 
 ## Case
 
-Gunakan konteks Loan System.
+Lanjutkan Customer Management API dari exercise sebelumnya.
 
-Actors:
+Pada exercise ini, sistem memiliki fitur:
 
-- `customer`
-- `agent`
-- `credit_analyst`
-- `supervisor`
-- `admin`
+1. Login sederhana.
+2. Current user endpoint.
+3. Customer API.
+4. Loan Application API.
+5. Authorization berdasarkan role.
 
-Resources:
+Sistem memiliki 3 role:
 
-- `loan_application`
-- `loan_approval`
-- `report`
-- `user_access`
+| Role | Description |
+|---|---|
+| ADMIN | Bisa mengakses semua endpoint |
+| STAFF | Bisa membuat customer dan loan application |
+| APPROVER | Bisa melihat data dan approve/reject loan application |
 
-## Task 1 - Explain Authentication vs Authorization
+## Endpoints
 
-Write explanation:
+### Auth API
 
-- authentication
-- authorization
-- example in loan system
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/v1/auth/login` | Login user |
+| GET | `/api/v1/auth/me` | Get current logged-in user |
 
-## Task 2 - Design JWT Payload
+### Customer API
 
-Create example JWT payload with:
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/v1/customers` | Create customer |
+| GET | `/api/v1/customers` | Get all customers |
+| GET | `/api/v1/customers/{id}` | Get customer by ID |
 
-- `user_id`
-- `role`
-- `branch_id`
-- `iss`
-- `exp`
+### Loan Application API
 
-Do not include:
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/v1/loan-applications` | Create loan application |
+| GET | `/api/v1/loan-applications` | Get all loan applications |
+| GET | `/api/v1/loan-applications/{id}` | Get loan application by ID |
+| PATCH | `/api/v1/loan-applications/{id}/approve` | Approve loan application |
+| PATCH | `/api/v1/loan-applications/{id}/reject` | Reject loan application |
 
-- password
-- full customer profile
-- sensitive customer data
-- API secret
+## Authorization Rules
 
-Example format:
+| Endpoint | ADMIN | STAFF | APPROVER |
+|---|---|---|---|
+| `POST /api/v1/auth/login` | Yes | Yes | Yes |
+| `GET /api/v1/auth/me` | Yes | Yes | Yes |
+| `POST /api/v1/customers` | Yes | Yes | No |
+| `GET /api/v1/customers` | Yes | Yes | Yes |
+| `GET /api/v1/customers/{id}` | Yes | Yes | Yes |
+| `POST /api/v1/loan-applications` | Yes | Yes | No |
+| `GET /api/v1/loan-applications` | Yes | Yes | Yes |
+| `GET /api/v1/loan-applications/{id}` | Yes | Yes | Yes |
+| `PATCH /api/v1/loan-applications/{id}/approve` | Yes | No | Yes |
+| `PATCH /api/v1/loan-applications/{id}/reject` | Yes | No | Yes |
+
+## Technical Requirements
+
+- Java 8 compatible.
+- Menggunakan Spring Boot.
+- Menggunakan dependency Spring Web.
+- Tidak menggunakan database.
+- Data disimpan menggunakan in-memory `Map`.
+- Menggunakan Controller, Service, DTO, dan Model.
+- JSON menggunakan `snake_case`.
+- Java menggunakan `camelCase`.
+- Menggunakan `@JsonProperty` untuk mapping `snake_case`.
+- Menggunakan `ResponseEntity` untuk status code.
+- Menggunakan simple token authentication.
+- Token boleh hardcoded.
+- Tidak perlu JWT.
+- Tidak perlu Spring Security.
+- Semua protected endpoint wajib membaca header `Authorization`.
+- Jika token kosong atau tidak valid, return `401 Unauthorized`.
+- Jika token valid tetapi role tidak punya akses, return `403 Forbidden`.
+
+## Dummy Users
+
+Gunakan user berikut:
+
+| Username | Password | Role | Token |
+|---|---|---|---|
+| admin | admin123 | ADMIN | token-admin |
+| staff | staff123 | STAFF | token-staff |
+| approver | approver123 | APPROVER | token-approver |
+
+## Protected Request Header
+
+Gunakan format berikut untuk protected endpoint:
+
+```text
+Authorization: Bearer token-admin
+````
+
+Contoh lain:
+
+```text
+Authorization: Bearer token-staff
+```
+
+```text
+Authorization: Bearer token-approver
+```
+
+---
+
+# Request & Response
+
+## 1. Login
+
+### Request
+
+```text
+POST /api/v1/auth/login
+```
 
 ```json
 {
-  "user_id": "USR-001",
-  "role": "credit_analyst",
-  "branch_id": "BR-001",
-  "iss": "loan-auth-service",
-  "exp": 1710000000
+  "username": "admin",
+  "password": "admin123"
 }
 ```
 
-## Task 3 - Create RBAC Matrix
+### Success Response
 
-Create RBAC matrix for:
-
-| Role | Create Loan | View Loan | Approve Loan | View Report | Manage User |
-| --- | --- | --- | --- | --- | --- |
-| customer | | | | | |
-| agent | | | | | |
-| credit_analyst | | | | | |
-| supervisor | | | | | |
-| admin | | | | | |
-
-Rules:
-
-- customer can create own loan.
-- customer can view own loan only.
-- agent can create/follow up assigned customer loan.
-- credit_analyst can approve loan in scope.
-- supervisor can view team/branch report.
-- admin can manage user access.
-- nobody should have all access by default.
-
-## Task 4 - Define Endpoint Access Policy
-
-Write access policy for:
-
-- `POST /api/v1/loan_applications`
-- `GET /api/v1/loan_applications/{id}`
-- `POST /api/v1/loan_approvals`
-- `GET /api/v1/reports/loan_summary`
-- `POST /api/v1/users/access`
-
-Each policy must include:
-
-- auth required or not
-- allowed role
-- resource-level check
-- success status
-- possible error status
-
-Suggested format:
+Status:
 
 ```text
-Endpoint:
-POST /api/v1/loan_approvals
+200 OK
+```
 
-Auth required:
-Yes, Bearer token
+Response:
 
-Allowed role:
-credit_analyst
+```json
+{
+  "token": "token-admin",
+  "username": "admin",
+  "role": "ADMIN"
+}
+```
 
-Resource-level check:
-loan_application branch must match analyst branch scope
+### Failed Response
 
-Success status:
-201 Created
+Status:
 
-Possible error status:
+```text
 401 Unauthorized
+```
+
+Response:
+
+```json
+{
+  "code": "UNAUTHORIZED",
+  "message": "Invalid username or password",
+  "errors": []
+}
+```
+
+---
+
+## 2. Get Current User
+
+### Request
+
+```text
+GET /api/v1/auth/me
+Authorization: Bearer token-admin
+```
+
+### Success Response
+
+Status:
+
+```text
+200 OK
+```
+
+Response:
+
+```json
+{
+  "username": "admin",
+  "role": "ADMIN"
+}
+```
+
+---
+
+## 3. Create Customer
+
+### Request
+
+```text
+POST /api/v1/customers
+Authorization: Bearer token-staff
+```
+
+```json
+{
+  "full_name": "Budi Santoso",
+  "email": "budi@mail.com",
+  "phone_number": "08123456789"
+}
+```
+
+### Success Response
+
+Status:
+
+```text
+201 Created
+```
+
+Response:
+
+```json
+{
+  "id": 1,
+  "full_name": "Budi Santoso",
+  "email": "budi@mail.com",
+  "phone_number": "08123456789"
+}
+```
+
+### Forbidden Response
+
+Jika role `APPROVER` mencoba create customer.
+
+Status:
+
+```text
 403 Forbidden
+```
+
+Response:
+
+```json
+{
+  "code": "FORBIDDEN",
+  "message": "You do not have permission to access this resource",
+  "errors": []
+}
+```
+
+---
+
+## 4. Get All Customers
+
+### Request
+
+```text
+GET /api/v1/customers
+Authorization: Bearer token-staff
+```
+
+### Success Response
+
+Status:
+
+```text
+200 OK
+```
+
+Response:
+
+```json
+[
+  {
+    "id": 1,
+    "full_name": "Budi Santoso",
+    "email": "budi@mail.com",
+    "phone_number": "08123456789"
+  }
+]
+```
+
+---
+
+## 5. Get Customer by ID
+
+### Request
+
+```text
+GET /api/v1/customers/1
+Authorization: Bearer token-staff
+```
+
+### Success Response
+
+Status:
+
+```text
+200 OK
+```
+
+Response:
+
+```json
+{
+  "id": 1,
+  "full_name": "Budi Santoso",
+  "email": "budi@mail.com",
+  "phone_number": "08123456789"
+}
+```
+
+### Not Found Response
+
+Status:
+
+```text
 404 Not Found
 ```
 
-## Task 5 - Define 401 and 403 Error Response
-
-Create example JSON for:
-
-- 401 Unauthorized
-- 403 Forbidden
-
-Each response must include:
-
-- `status`
-- `error_code`
-- `message`
-- `correlation_id`
-
-Example 401:
+Response:
 
 ```json
 {
-  "status": 401,
-  "error_code": "UNAUTHORIZED",
-  "message": "Authentication required",
-  "correlation_id": "REQ-20260424-001"
+  "code": "CUSTOMER_NOT_FOUND",
+  "message": "Customer not found",
+  "errors": []
 }
 ```
 
-Example 403:
+---
 
-```json
-{
-  "status": 403,
-  "error_code": "FORBIDDEN",
-  "message": "Access denied",
-  "correlation_id": "REQ-20260424-002"
-}
-```
+## 6. Create Loan Application
 
-## Task 6 - Write Resource Ownership Scenario
-
-Create scenario:
-
-- `authenticated_customer_id` is `CUST-001`
-- `requested_customer_id` is `CUST-999`
-- endpoint is `GET /api/v1/loan_applications/{id}`
-
-Explain:
-
-- should this be allowed?
-- what status should be returned?
-- why?
-
-## Task 7 - Write Loan Approval Scenario
-
-Scenario:
-
-- agent has valid token.
-- agent calls `POST /api/v1/loan_approvals`.
-- endpoint requires `credit_analyst` role.
-
-Explain:
-
-- authentication result
-- authorization result
-- expected HTTP status
-- expected error response
-- expected audit log result
-
-## Task 8 - Create Access Log Design
-
-Define access log fields:
-
-- `correlation_id`
-- `user_id`
-- `role`
-- `endpoint`
-- `action`
-- `resource_id`
-- `result`
-- `reason`
-- `created_at`
-
-Explain purpose of each field.
-
-Suggested format:
-
-| Field | Purpose | Example |
-| --- | --- | --- |
-| correlation_id | trace request | REQ-20260424-001 |
-| user_id | identify actor | USR-001 |
-| role | access context | agent |
-| endpoint | target API | POST /api/v1/loan_approvals |
-| action | business action | approve_loan |
-| resource_id | target resource | LOAN-001 |
-| result | allow/deny result | 403 FORBIDDEN |
-| reason | short reason | role_not_allowed |
-| created_at | event time | 2026-04-24T10:15:30Z |
-
-## Task 9 - Update API Contract with Auth Requirement
-
-Choose one endpoint:
+### Request
 
 ```text
-POST /api/v1/loan_approvals
+POST /api/v1/loan-applications
+Authorization: Bearer token-staff
 ```
-
-Write API contract including:
-
-- method
-- URL
-- description
-- auth requirement
-- allowed role
-- resource-level check
-- request body
-- success response
-- 401 response
-- 403 response
-- status code
-
-Example request body:
 
 ```json
 {
-  "loan_application_id": "LOAN-001",
-  "decision": "approved",
-  "notes": "Applicant meets policy requirement"
+  "customer_id": 1,
+  "loan_amount": 5000000,
+  "tenor_month": 12,
+  "purpose": "Modal usaha"
 }
 ```
 
-Example success response:
+### Success Response
+
+Status:
+
+```text
+201 Created
+```
+
+Response:
 
 ```json
 {
-  "approval_id": "APR-001",
-  "loan_application_id": "LOAN-001",
-  "decision": "approved",
-  "approved_by": "USR-001"
+  "id": 1,
+  "customer_id": 1,
+  "loan_amount": 5000000,
+  "tenor_month": 12,
+  "purpose": "Modal usaha",
+  "status": "SUBMITTED"
 }
 ```
 
-## Acceptance Criteria
+### Forbidden Response
 
-- [ ] Authentication and authorization are explained correctly.
-- [ ] JWT payload example contains safe claims.
-- [ ] JWT payload does not contain sensitive data.
-- [ ] RBAC matrix is created.
-- [ ] Endpoint access policy is created.
-- [ ] 401 response is used for missing/invalid/expired token.
-- [ ] 403 response is used for valid user without access.
-- [ ] Resource ownership scenario is explained.
-- [ ] Loan approval scenario is explained.
-- [ ] Access log fields are defined.
-- [ ] API contract includes auth requirement.
-- [ ] API contract includes role requirement.
-- [ ] API contract includes possible security error responses.
+Jika role `APPROVER` mencoba create loan application.
 
-## Optional Challenge
+Status:
 
-- Add permission-based matrix in addition to role matrix.
-- Add branch scope examples.
-- Add denied access audit log example.
-- Add Swagger/OpenAPI security scheme explanation.
-- Add pseudo-code for checking role and resource ownership.
+```text
+403 Forbidden
+```
+
+Response:
+
+```json
+{
+  "code": "FORBIDDEN",
+  "message": "You do not have permission to access this resource",
+  "errors": []
+}
+```
+
+---
+
+## 7. Get All Loan Applications
+
+### Request
+
+```text
+GET /api/v1/loan-applications
+Authorization: Bearer token-approver
+```
+
+### Success Response
+
+Status:
+
+```text
+200 OK
+```
+
+Response:
+
+```json
+[
+  {
+    "id": 1,
+    "customer_id": 1,
+    "loan_amount": 5000000,
+    "tenor_month": 12,
+    "purpose": "Modal usaha",
+    "status": "SUBMITTED"
+  }
+]
+```
+
+---
+
+## 8. Get Loan Application by ID
+
+### Request
+
+```text
+GET /api/v1/loan-applications/1
+Authorization: Bearer token-approver
+```
+
+### Success Response
+
+Status:
+
+```text
+200 OK
+```
+
+Response:
+
+```json
+{
+  "id": 1,
+  "customer_id": 1,
+  "loan_amount": 5000000,
+  "tenor_month": 12,
+  "purpose": "Modal usaha",
+  "status": "SUBMITTED"
+}
+```
+
+### Not Found Response
+
+Status:
+
+```text
+404 Not Found
+```
+
+Response:
+
+```json
+{
+  "code": "LOAN_APPLICATION_NOT_FOUND",
+  "message": "Loan application not found",
+  "errors": []
+}
+```
+
+---
+
+## 9. Approve Loan Application
+
+### Request
+
+```text
+PATCH /api/v1/loan-applications/1/approve
+Authorization: Bearer token-approver
+```
+
+### Success Response
+
+Status:
+
+```text
+200 OK
+```
+
+Response:
+
+```json
+{
+  "id": 1,
+  "customer_id": 1,
+  "loan_amount": 5000000,
+  "tenor_month": 12,
+  "purpose": "Modal usaha",
+  "status": "APPROVED"
+}
+```
+
+### Forbidden Response
+
+Jika role `STAFF` mencoba approve loan application.
+
+Status:
+
+```text
+403 Forbidden
+```
+
+Response:
+
+```json
+{
+  "code": "FORBIDDEN",
+  "message": "You do not have permission to access this resource",
+  "errors": []
+}
+```
+
+---
+
+## 10. Reject Loan Application
+
+### Request
+
+```text
+PATCH /api/v1/loan-applications/1/reject
+Authorization: Bearer token-approver
+```
+
+### Success Response
+
+Status:
+
+```text
+200 OK
+```
+
+Response:
+
+```json
+{
+  "id": 1,
+  "customer_id": 1,
+  "loan_amount": 5000000,
+  "tenor_month": 12,
+  "purpose": "Modal usaha",
+  "status": "REJECTED"
+}
+```
+
+---
+
+# Standard Error Responses
+
+## 401 Unauthorized
+
+Digunakan jika token kosong atau token tidak valid.
+
+```json
+{
+  "code": "UNAUTHORIZED",
+  "message": "Authentication is required",
+  "errors": []
+}
+```
+
+## 403 Forbidden
+
+Digunakan jika user sudah login tetapi tidak punya akses.
+
+```json
+{
+  "code": "FORBIDDEN",
+  "message": "You do not have permission to access this resource",
+  "errors": []
+}
+```
+
+## 404 Not Found
+
+Digunakan jika data tidak ditemukan.
+
+```json
+{
+  "code": "NOT_FOUND",
+  "message": "Data not found",
+  "errors": []
+}
+```
+
+---
+
+# Suggested Structure
+
+```text
+src/main/java/com/example/training/
+├── TrainingApplication.java
+├── controller/
+│   ├── AuthController.java
+│   ├── CustomerController.java
+│   └── LoanApplicationController.java
+├── service/
+│   ├── AuthService.java
+│   ├── CustomerService.java
+│   └── LoanApplicationService.java
+├── dto/
+│   ├── LoginRequest.java
+│   ├── LoginResponse.java
+│   ├── UserResponse.java
+│   ├── CreateCustomerRequest.java
+│   ├── CustomerResponse.java
+│   ├── CreateLoanApplicationRequest.java
+│   ├── LoanApplicationResponse.java
+│   └── ErrorResponse.java
+├── model/
+│   ├── User.java
+│   ├── Customer.java
+│   └── LoanApplication.java
+└── security/
+    ├── AuthContext.java
+    ├── AuthUtil.java
+    └── RoleValidator.java
+```
+
+# Tasks
+
+1. Lanjutkan project dari exercise sebelumnya.
+2. Buat model `User`.
+3. Buat dummy user `admin`, `staff`, dan `approver`.
+4. Buat DTO `LoginRequest`.
+5. Buat DTO `LoginResponse`.
+6. Buat DTO `UserResponse`.
+7. Buat `AuthService`.
+8. Buat `AuthController`.
+9. Buat endpoint `POST /api/v1/auth/login`.
+10. Buat endpoint `GET /api/v1/auth/me`.
+11. Buat helper untuk membaca token dari header `Authorization`.
+12. Buat validasi token sederhana.
+13. Buat validasi role sederhana.
+14. Proteksi Customer API menggunakan token.
+15. Buat model `LoanApplication`.
+16. Buat DTO `CreateLoanApplicationRequest`.
+17. Buat DTO `LoanApplicationResponse`.
+18. Buat `LoanApplicationService`.
+19. Buat `LoanApplicationController`.
+20. Buat endpoint Loan Application API.
+21. Terapkan authorization sesuai role.
+22. Return `401 Unauthorized` jika token kosong atau invalid.
+23. Return `403 Forbidden` jika role tidak punya akses.
+24. Return `404 Not Found` jika data tidak ditemukan.
+25. Test semua endpoint menggunakan Postman.
+26. Push ke fork dan buat Pull Request.
+
+# Acceptance Criteria
+
+* [ ] Application bisa berjalan di `localhost:8080`.
+* [ ] Login admin menghasilkan `token-admin`.
+* [ ] Login staff menghasilkan `token-staff`.
+* [ ] Login approver menghasilkan `token-approver`.
+* [ ] Login salah menghasilkan `401 Unauthorized`.
+* [ ] Request tanpa token menghasilkan `401 Unauthorized`.
+* [ ] Request dengan token tidak valid menghasilkan `401 Unauthorized`.
+* [ ] `GET /api/v1/auth/me` berjalan.
+* [ ] Customer API tetap berjalan.
+* [ ] `LoanApplicationService` berhasil dibuat.
+* [ ] `POST /api/v1/loan-applications` berjalan.
+* [ ] `GET /api/v1/loan-applications` berjalan.
+* [ ] `GET /api/v1/loan-applications/{id}` berjalan.
+* [ ] `PATCH /api/v1/loan-applications/{id}/approve` berjalan.
+* [ ] `PATCH /api/v1/loan-applications/{id}/reject` berjalan.
+* [ ] Staff bisa create loan application.
+* [ ] Staff tidak bisa approve loan application.
+* [ ] Approver bisa approve loan application.
+* [ ] Approver bisa reject loan application.
+* [ ] Approver tidak bisa create customer.
+* [ ] Admin bisa mengakses semua endpoint.
+* [ ] Akses tanpa permission menghasilkan `403 Forbidden`.
+* [ ] Response JSON menggunakan `snake_case`.
+* [ ] Controller tidak berisi business logic utama.
+* [ ] Service berisi business logic.
+* [ ] Data disimpan di memory.
+* [ ] Tidak menggunakan database.
+* [ ] Pull Request dibuat ke branch `master`.
+
+# Optional Challenge
+
+Jika tugas utama sudah selesai, coba tambahkan:
+
+* `GET /api/v1/loan-applications?status=SUBMITTED`
+* `GET /api/v1/loan-applications?customer_id=1`
+* `PATCH /api/v1/loan-applications/{id}/cancel`
+* Role baru: `MANAGER`
+* Manager hanya boleh approve loan application di atas nominal tertentu.
+
+```
+
+Ini lebih clean karena request/response dipisah per endpoint, dan error response standar juga jelas.
+```
