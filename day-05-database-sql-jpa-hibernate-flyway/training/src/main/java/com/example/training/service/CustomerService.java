@@ -13,10 +13,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
+// @RequiredArgsConstructor
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+
+    public CustomerService(CustomerRepository customerRepository){
+        this.customerRepository = customerRepository;
+    }
 
     @Transactional(readOnly = true)
     public List<CustomerResponse> findAll() {
@@ -40,6 +44,15 @@ public class CustomerService {
         return customerRepository.findByFullNameContainingIgnoreCase(name).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public CustomerResponse updateStatus(Long id, DeleteCustomerDto request){
+        CustomerEntity customer = customerRepository.findById(id).orElseThrow(() -> new CustomerNotFoundException(
+                        "Customer with ID " + id + " not found"));
+        customer.setDeleted(request.getIsDeleted());
+        customerRepository.save(customer);
+        return toResponse(customer);
     }
 
     @Transactional

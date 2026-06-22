@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LoanApplicationService {
 
     private final LoanApplicationRepository loanRepository;
@@ -146,7 +147,7 @@ public class LoanApplicationService {
                     "Cannot close loan. There are still unpaid repayment schedules.");
             }
         }
-
+        
         loan.setStatus(next);
         return toResponse(loanRepository.save(loan));
     }

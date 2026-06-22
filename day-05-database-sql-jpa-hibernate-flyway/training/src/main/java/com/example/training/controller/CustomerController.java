@@ -12,10 +12,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/customers")
-@RequiredArgsConstructor
+// @RequiredArgsConstructor
 public class CustomerController {
 
     private final CustomerService customerService;
+
+    public CustomerController(CustomerService customerService){
+        this.customerService = customerService;
+    }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<CustomerResponse>>> getAll() {
@@ -39,5 +43,13 @@ public class CustomerController {
     public ResponseEntity<ApiResponse<CustomerResponse>> create(@Valid @RequestBody CreateCustomerRequest request) {
         CustomerResponse data = customerService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Customer created successfully", data));
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<CustomerResponse>> updateStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody DeleteCustomerDto request) {
+        CustomerResponse data = customerService.updateStatus(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Loan status updated successfully", data));
     }
 }
