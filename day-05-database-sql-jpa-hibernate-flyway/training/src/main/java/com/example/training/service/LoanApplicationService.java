@@ -85,6 +85,9 @@ public class LoanApplicationService {
 
     @Transactional(readOnly = true)
     public List<LoanApplicationResponse> findByCustomerId(Long customerId) {
+        if(customerRepository.findUserByIdAndIsDeleted(customerId)){
+            throw new CustomerNotFoundException("Customer with id: " + customerId + " is deleted");
+        }
         return loanRepository.findByCustomerId(customerId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
@@ -217,6 +220,9 @@ public class LoanApplicationService {
 
     @Transactional(readOnly = true)
     public CustomerOutstandingDto getCustomerOutstandingById(Long customerId) {
+        if(customerRepository.findUserByIdAndIsDeleted(customerId)){
+            throw new CustomerNotFoundException("Customer with id: " + customerId + " is deleted");
+        }
         return loanRepository.findCustomerOutstandingById(customerId)
                 .map(this::toOutstandingDto)
                 .orElseThrow(() -> new CustomerNotFoundException(
