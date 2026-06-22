@@ -40,4 +40,12 @@ public class CustomerController {
         CustomerResponse data = customerService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Customer created successfully", data));
     }
+    
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<CustomerResponse>> updateStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody DeleteCustomerDto request) {
+        CustomerResponse data = customerService.updateStatus(id, request);
+        return ResponseEntity.ok(ApiResponse.success("Loan status updated successfully", data));
+    }
 }

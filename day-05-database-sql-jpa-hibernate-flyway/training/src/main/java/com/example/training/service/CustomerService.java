@@ -43,6 +43,15 @@ public class CustomerService {
     }
 
     @Transactional
+    public CustomerResponse updateStatus(Long id, DeleteCustomerDto request){
+        CustomerEntity customer = customerRepository.findById(id).orElseThrow(() -> new CustomerNotFoundException(
+                        "Customer with ID " + id + " not found"));
+        customer.setDeleted(request.getIsDeleted());
+        customerRepository.save(customer);
+        return toResponse(customer);
+    }
+
+    @Transactional
     public CustomerResponse create(CreateCustomerRequest request) {
         if (customerRepository.existsByNik(request.getNik())) {
             throw new DuplicateCustomerException("NIK already exists: " + request.getNik());
