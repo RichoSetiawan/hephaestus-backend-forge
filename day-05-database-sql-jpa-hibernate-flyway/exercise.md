@@ -34,7 +34,8 @@ Flow bisnis sederhana:
 - Loan application wajib memiliki `customer_id`, `loan_amount`, `tenor_month`, dan `purpose`.
 - Status awal loan application adalah `SUBMITTED`.
 - Status loan application bisa: `SUBMITTED`, `APPROVED`, `REJECTED`, `DISBURSED`, `CLOSED`.
-- Repayment schedule dibuat berdasarkan tenor.
+- Perubahan status harus mengikuti flow loan; status tidak boleh dilompati atau dikembalikan ke status sebelumnya.
+- Repayment schedule dibuat berdasarkan tenor saat loan berstatus `DISBURSED`.
 - Payment transaction mencatat pembayaran cicilan.
 - Jika customer tidak ditemukan saat create loan, return 404.
 - Jika loan tidak ditemukan, return 404.
@@ -44,7 +45,22 @@ Flow bisnis sederhana:
 
 ## Repayment Schedule Rules
 
-Repayment schedule dibuat setelah loan berstatus `APPROVED` atau `DISBURSED`. Pilih salah satu status pemicu dan gunakan secara konsisten.
+### Loan Status Flow
+
+```text
+SUBMITTED --> APPROVED --> DISBURSED --> CLOSED
+     |
+     +--> REJECTED
+```
+
+- Saat create loan, backend menetapkan status `SUBMITTED`.
+- Loan `SUBMITTED` hanya dapat diubah menjadi `APPROVED` atau `REJECTED`.
+- Loan `APPROVED` hanya dapat diubah menjadi `DISBURSED`.
+- Saat status berubah ke `DISBURSED`, backend membuat repayment schedule sesuai `tenor_month`. Schedule hanya dibuat sekali.
+- Loan `DISBURSED` hanya dapat diubah menjadi `CLOSED` setelah seluruh repayment schedule berstatus `PAID`.
+- `REJECTED` dan `CLOSED` adalah status akhir; status tersebut tidak boleh diubah lagi.
+
+Repayment schedule tidak dibuat saat loan masih `SUBMITTED` atau hanya `APPROVED`; schedule dibuat ketika loan benar-benar `DISBURSED`.
 
 Untuk exercise ini, gunakan bunga **flat 12% per tahun**. Bunga wajib berasal dari konfigurasi backend, bukan dari input request customer dan bukan dari payment transaction.
 
