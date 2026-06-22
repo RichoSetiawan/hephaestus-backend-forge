@@ -2,6 +2,8 @@ package com.example.training.service;
 
 import com.example.training.dto.RepaymentScheduleResponse;
 import com.example.training.entity.RepaymentScheduleEntity;
+import com.example.training.enums.LoanStatus;
+import com.example.training.enums.RepaymentStatus;
 import com.example.training.exception.LoanApplicationNotFoundException;
 import com.example.training.exception.RepaymentScheduleNotFoundException;
 import com.example.training.repository.LoanApplicationRepository;
@@ -28,6 +30,11 @@ public class RepaymentScheduleService {
         return repaymentScheduleRepository.findByLoanApplicationId(loanApplicationId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<RepaymentScheduleResponse> findByStatus(RepaymentStatus param){
+        return repaymentScheduleRepository.findByStatus(param).stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

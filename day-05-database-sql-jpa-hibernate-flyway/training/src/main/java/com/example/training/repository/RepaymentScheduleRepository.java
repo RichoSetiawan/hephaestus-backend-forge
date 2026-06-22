@@ -19,4 +19,10 @@ public interface RepaymentScheduleRepository extends JpaRepository<RepaymentSche
 
     @Query("SELECT r FROM RepaymentScheduleEntity r JOIN FETCH r.loanApplication WHERE r.id = :id")
     Optional<RepaymentScheduleEntity> findByIdWithLoanApplication(@Param("id") Long id);
+
+    @Query("SELECT COUNT(r) FROM RepaymentScheduleEntity r WHERE r.loanApplicationId = :loanId AND r.status != 'PAID'")
+    Long countUnpaidByLoanApplicationId(@Param("loanId") Long loanId);
+
+    @Query("SELECT CASE WHEN COUNT(r) > 0 THEN true ELSE false END FROM RepaymentScheduleEntity r WHERE r.loanApplicationId = :loanId AND r.status != 'PAID'")
+    boolean existsUnpaidByLoanApplicationId(@Param("loanId") Long loanId);
 }

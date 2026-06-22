@@ -31,6 +31,9 @@ public class CustomerEntity {
     @Column(name = "phone_number")
     private String phoneNumber;
 
+    @Column(name = "is_deleted")
+    private boolean isDeleted;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private ZonedDateTime createdAt;

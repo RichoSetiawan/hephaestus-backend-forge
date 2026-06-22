@@ -11,13 +11,21 @@ import com.example.training.repository.CustomerRepository;
 import com.example.training.repository.LoanApplicationRepository;
 import com.example.training.repository.RepaymentScheduleRepository;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,6 +35,8 @@ public class LoanApplicationService {
     private final LoanApplicationRepository loanRepository;
     private final CustomerRepository customerRepository;
     private final RepaymentScheduleRepository repaymentScheduleRepository;
+
+    private static final Set<LoanStatus> TERMINAL_STATUSES = EnumSet.of(LoanStatus.REJECTED, LoanStatus.CLOSED);
 
     @Transactional
     public LoanApplicationResponse create(CreateLoanApplicationRequest request) {
@@ -45,7 +55,7 @@ public class LoanApplicationService {
         LoanApplicationEntity saved = loanRepository.save(loan);
 
         // Generate repayment schedules
-        generateRepaymentSchedules(saved);
+        // generateRepaymentSchedules(saved);
 
         return toResponse(saved);
     }
@@ -78,18 +88,163 @@ public class LoanApplicationService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public Page<LoanApplicationResponse> getAllLoanPagination(LoanStatus status, ZonedDateTime startDate, ZonedDateTime endDate, Pageable pageable){
+        if(startDate == null){
+            startDate = Instant.EPOCH.atZone(ZoneId.of("Asia/Jakarta"));
+        }
+        if(endDate == null){
+            endDate = ZonedDateTime.now();
+        }
+        Page<LoanApplicationEntity> entityPage = loanRepository.findByStatusAndDateRangeWithPage(status, startDate, endDate, pageable);
+        return entityPage.map(this::toResponse);
+    }
+
+    // @Transactional
+    // public LoanApplicationResponse updateStatus(Long id, UpdateLoanStatusRequest request) {
+    //     LoanApplicationEntity loan = loanRepository.findById(id)
+    //             .orElseThrow(() -> new LoanApplicationNotFoundException("Loan application not found with id: " + id));
+    //     loan.setStatus(request.getStatus());
+    //     return toResponse(loanRepository.save(loan));
+    // }
+
     @Transactional
     public LoanApplicationResponse updateStatus(Long id, UpdateLoanStatusRequest request) {
         LoanApplicationEntity loan = loanRepository.findById(id)
-                .orElseThrow(() -> new LoanApplicationNotFoundException("Loan application not found with id: " + id));
-        loan.setStatus(request.getStatus());
+                .orElseThrow(() -> new LoanApplicationNotFoundException("Loan not found"));
+
+        LoanStatus current = loan.getStatus();
+        LoanStatus next = request.getStatus();
+
+        // Rule 1: Terminal states cannot be changed
+        if (TERMINAL_STATUSES.contains(current)) {
+            throw new IllegalStateException(
+                "Loan with status " + current + " cannot be changed. Terminal state.");
+        }
+
+        // Rule 2: Validate state transition
+        validateStateTransition(current, next);
+
+        // Rule 3: Create repayment schedule ONLY when transitioning to DISBURSED
+        if (next == LoanStatus.DISBURSED) {
+            if (repaymentScheduleRepository.findByLoanApplicationId(id).isEmpty()) {
+                generateRepaymentSchedules(loan);
+            }
+        }
+
+        // Rule 4: CLOSED only if all repayment schedules are PAID
+        if (next == LoanStatus.CLOSED) {
+            boolean hasUnpaid = repaymentScheduleRepository.existsUnpaidByLoanApplicationId(id);
+            if (hasUnpaid) {
+                throw new IllegalStateException(
+                    "Cannot close loan. There are still unpaid repayment schedules.");
+            }
+        }
+
+        loan.setStatus(next);
         return toResponse(loanRepository.save(loan));
+    }
+
+    private void validateStateTransition(LoanStatus current, LoanStatus next) {
+        switch (current) {
+            case SUBMITTED:
+                if (next != LoanStatus.APPROVED && next != LoanStatus.REJECTED) {
+                    throw new IllegalStateException(
+                        "SUBMITTED can only become APPROVED or REJECTED");
+                }
+                break;
+            case APPROVED:
+                if (next != LoanStatus.DISBURSED) {
+                    throw new IllegalStateException(
+                        "APPROVED can only become DISBURSED");
+                }
+                break;
+            case DISBURSED:
+                if (next != LoanStatus.CLOSED) {
+                    throw new IllegalStateException(
+                        "DISBURSED can only become CLOSED");
+                }
+                break;
+            default:
+                throw new IllegalStateException("Invalid transition");
+        }
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<LoanReportDto> getLoanSummaryByStatus() {
+        return loanRepository.summarizeByStatus().stream()
+                .map(p -> LoanReportDto.builder()
+                        .status(p.getStatus())
+                        .totalLoans(p.getTotalLoans())
+                        .totalAmount(p.getTotalAmount())
+                        .averageAmount(p.getAverageAmount())
+                        .minAmount(p.getMinAmount())
+                        .maxAmount(p.getMaxAmount())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<LoanReportDto> getLoanSummaryByStatusAndDateRange(
+            ZonedDateTime startDate, ZonedDateTime endDate) {
+            if(startDate == null){
+            startDate = Instant.EPOCH.atZone(ZoneId.of("Asia/Jakarta"));
+            }
+            if(endDate == null){
+                endDate = ZonedDateTime.now();
+            }
+        return loanRepository.summarizeByStatusAndDateRange(startDate, endDate).stream()
+                .map(p -> LoanReportDto.builder()
+                        .status(p.getStatus())
+                        .totalLoans(p.getTotalLoans())
+                        .totalAmount(p.getTotalAmount())
+                        .averageAmount(p.getAverageAmount())
+                        .minAmount(p.getMinAmount())
+                        .maxAmount(p.getMaxAmount())
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<CustomerOutstandingDto> getCustomerOutstandingReport() {
+        return loanRepository.findCustomerOutstandingReport().stream()
+                .map(this::toOutstandingDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public CustomerOutstandingDto getCustomerOutstandingById(Long customerId) {
+        return loanRepository.findCustomerOutstandingById(customerId)
+                .map(this::toOutstandingDto)
+                .orElseThrow(() -> new CustomerNotFoundException(
+                    "Customer not found or has no loans: " + customerId));
+    }
+
+    private CustomerOutstandingDto toOutstandingDto(CustomerOutstandingProjection p) {
+        BigDecimal percentage = BigDecimal.ZERO;
+        if (p.getTotalLoanAmount() != null && p.getTotalLoanAmount().compareTo(BigDecimal.ZERO) > 0) {
+            percentage = p.getTotalPaid()
+                    .multiply(new BigDecimal("100"))
+                    .divide(p.getTotalLoanAmount(), 2, RoundingMode.HALF_UP);
+        }
+        return CustomerOutstandingDto.builder()
+                .customerId(p.getCustomerId())
+                .fullName(p.getFullName())
+                .nik(p.getNik())
+                .totalLoanAmount(p.getTotalLoanAmount())
+                .totalPaid(p.getTotalPaid())
+                .outstandingAmount(p.getOutstandingAmount())
+                .paymentPercentage(percentage)
+                .totalLoans(p.getTotalLoans())
+                .activeLoans(p.getActiveLoans())
+                .build();
     }
 
     private void generateRepaymentSchedules(LoanApplicationEntity loan) {
         BigDecimal monthlyPrincipal = loan.getLoanAmount()
                 .divide(BigDecimal.valueOf(loan.getTenorMonth()), 2, RoundingMode.HALF_UP);
-        BigDecimal interestRate = new BigDecimal("0.012"); // 1.2% per month example
+        BigDecimal interestRate = new BigDecimal("0.01"); // 1% per month example
         BigDecimal monthlyInterest = loan.getLoanAmount().multiply(interestRate)
                 .setScale(2, RoundingMode.HALF_UP);
         BigDecimal totalMonthly = monthlyPrincipal.add(monthlyInterest);

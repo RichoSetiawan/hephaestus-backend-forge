@@ -44,6 +44,9 @@ public class PaymentTransactionService {
         if (totalPaid.compareTo(schedule.getTotalAmount()) >= 0) {
             schedule.setStatus(RepaymentStatus.PAID);
             repaymentScheduleRepository.save(schedule);
+        } else if (totalPaid.compareTo(schedule.getTotalAmount()) < 0){
+            schedule.setStatus(RepaymentStatus.PARTIAL);
+            repaymentScheduleRepository.save(schedule);
         }
 
         return toResponse(saved);
