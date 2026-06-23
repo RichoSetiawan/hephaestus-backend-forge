@@ -9,6 +9,8 @@ import com.example.training.enums.RepaymentStatus;
 import com.example.training.exception.RepaymentScheduleNotFoundException;
 import com.example.training.repository.PaymentTransactionRepository;
 import com.example.training.repository.RepaymentScheduleRepository;
+import com.example.training.utils.LoggingUtil;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

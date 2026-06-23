@@ -32,7 +32,7 @@ public class CustomerEntity {
     private String phoneNumber;
 
     @Column(name = "is_deleted")
-    private boolean isDeleted;
+    private boolean deleted;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

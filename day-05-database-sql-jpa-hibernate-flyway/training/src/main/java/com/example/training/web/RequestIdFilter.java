@@ -1,4 +1,4 @@
-package com.example.training.service;
+package com.example.training.web;
 
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;

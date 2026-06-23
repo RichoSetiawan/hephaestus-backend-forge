@@ -2,7 +2,8 @@ package com.example.training.exception;
 
 import com.example.training.dto.ApiResponse;
 import com.example.training.dto.FieldErrorResponse;
-import com.example.training.service.LoggingUtil;
+import com.example.training.utils.LoggingUtil;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

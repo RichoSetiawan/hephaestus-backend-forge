@@ -10,6 +10,8 @@ import com.example.training.exception.LoanApplicationNotFoundException;
 import com.example.training.repository.CustomerRepository;
 import com.example.training.repository.LoanApplicationRepository;
 import com.example.training.repository.RepaymentScheduleRepository;
+import com.example.training.utils.LoggingUtil;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -64,9 +66,6 @@ public class LoanApplicationService {
         LoggingUtil.audit("LOAN_SUBMITTED", "CREATE", 
                 "Loan id=" + saved.getId() + ", amount=" + request.getLoanAmount() + ", customer=" + request.getCustomerId());
         log.info("Loan application created successfully: id={}", saved.getId());
-
-        // Generate repayment schedules
-        // generateRepaymentSchedules(saved);
 
         return toResponse(saved);
     }
@@ -132,14 +131,6 @@ public class LoanApplicationService {
                 entityPage.getNumberOfElements(), entityPage.getNumber(), entityPage.getTotalPages());
         return entityPage.map(this::toResponse);
     }
-
-    // @Transactional
-    // public LoanApplicationResponse updateStatus(Long id, UpdateLoanStatusRequest request) {
-    //     LoanApplicationEntity loan = loanRepository.findById(id)
-    //             .orElseThrow(() -> new LoanApplicationNotFoundException("Loan application not found with id: " + id));
-    //     loan.setStatus(request.getStatus());
-    //     return toResponse(loanRepository.save(loan));
-    // }
 
     @Transactional
     public LoanApplicationResponse updateStatus(Long id, UpdateLoanStatusRequest request) {

@@ -1,4 +1,4 @@
-package com.example.training.service;
+package com.example.training.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;  // ← TAMBAH INI

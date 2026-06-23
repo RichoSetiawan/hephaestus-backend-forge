@@ -5,6 +5,8 @@ import com.example.training.entity.CustomerEntity;
 import com.example.training.exception.CustomerNotFoundException;
 import com.example.training.exception.DuplicateCustomerException;
 import com.example.training.repository.CustomerRepository;
+import com.example.training.utils.LoggingUtil;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
