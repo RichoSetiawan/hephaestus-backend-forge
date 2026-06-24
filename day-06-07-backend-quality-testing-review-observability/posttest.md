@@ -109,20 +109,21 @@ Data Pribadi/PII (Personally Identifiable Information) dan data kredensial, sepe
 Apa 3 hal utama yang kamu pahami hari ini?
 
 ```text
-1.
-2.
-3.
+1. Test
+2. Unit Test
+3. Mock Test
 ```
 
 Apa 2 hal yang masih membingungkan?
 
 ```text
-1.
-2.
+1. Membuat code test
+2. membuat case test
 ```
 
 Apa 1 hal yang akan kamu cek saat melakukan code review?
 
 ```text
 Tulis jawaban di sini.
+melihat unit test dan test case
 ```
